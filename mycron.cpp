@@ -12,52 +12,59 @@
 using namespace std;
 
 struct task{
-    int hour;
-    int min;
-    int sec;
-    vector<string>roll;
+    int hour = -2; //-2 default; -1 for *; 
+    int min = -2;
+    int sec = -2;
+    vector<string>command;
 };
-
 
 vector<task>Tasks;
 
-void read_file(){
-	//function that read and prepare data from input file for use
-	ifstream f("mycrontab");
-	string temp_str;
-	int j = 0;
-	while(getline(f, temp_str)){														//get new line from file
-		char *temp_Cstr = new char[temp_str.size() + 1];								//init C-string in order to use it for reading HH:MM:SS on 33 line
-		strcpy(temp_Cstr,temp_str.c_str());												//copying our c++String to C-string
-		struct task temp_task;															//init temporary structure that we will push_back in Tasks
-		sscanf(temp_Cstr,"%d:%d:%d", &temp_task.hour, &temp_task.min, &temp_task.sec);	//reading HH:MM:SS to temporary
-		int i = temp_str.find_first_of(' ') + 1;										//init i - counter that on the begining points on 1 symbol of roll
-		string tt;																		//init temporary string that we well push_back in temp_task.roll
-		while( i < temp_str.size() ){													//init cycle
-			tt.push_back(temp_str[i]);													//adding symbol by symbol to tt
-/*trouble*/	if(temp_str[i] == ' ' || temp_str[i] == '\n' || temp_str[i] == EOF){		//while we dont have spaces, new lines or EOF ##here is problem it doesnt understand EOFs 
-				tt.pop_back();															//if we have this symbol we should to throw it away from task
-				temp_task.roll.push_back(tt);											//this symbol means the end of one part of command, so we add it to roll
-				tt.erase();																//clean temporary string
+struct task parse(string line){ //create a struct tusk from one line of input file
+	struct task result;
+	int t = 0;
+	int i = 0;
+	for(; i < line.size(); i++){
+		if(line[i] == ' '){
+			result.sec = t;
+			break;
+		}else if(line[i] != ':'){ // cipherka
+			if (line[i] == '*') t = -1; else {
+ 				t*=10;
+				t+=line[i] - '0';
 			}
-			i++;					
-		}	
-		Tasks.push_back(temp_task);														//add temporary struct to our general vector
-
-
-		cout << Tasks[j].hour;															// this part just to prove that everything works
-		printf("%d ", Tasks[j].hour);
-		printf("%d ", Tasks[j].min);
-		printf("%d ", Tasks[j].sec);
-		for(int i = 0; i < Tasks[j].roll.size(); i++){
-			cout << Tasks[j].roll[i] << ' ';
+		}else { // :
+			if (result.hour == -2) {
+				result.hour = t;
+			} else if (result.min == -2) {
+				result.min = t;
+			}
+			t = 0;
 		}
+	}
+	line.push_back(' ');
+	i++;
+	string tt;																		 	
+		while( i < line.size() ){													
+			tt.push_back(line[i]);												
+			if(line[i] == ' ' ){												
+				tt.pop_back();													
+				result.command.push_back(tt);									
+				tt.erase();														
+			}	
+			i++;					
+		}
+	return result;
+}
 
-		j++;
-		temp_task = {};
-		temp_str = {};
-		temp_Cstr = {};
-		//TODO it may be a good idea to sort Tasks?? but who knows...
+void read_file(string path){
+	//read and prepare data from input file using parse
+	ifstream f(path.c_str());
+	string temp_str;
+	struct task temp_task;
+	while(getline(f, temp_str)){
+		temp_task = parse(temp_str);
+		Tasks.push_back(temp_task);
 	}
 }
 	
@@ -79,15 +86,18 @@ int main(){
 	    if(current_Time >= Tasks[i].Time) exec();
 	}
     }*/
-    read_file();
-
+    read_file("mycrontab");
+    for(int i = 0; i < Tasks.size(); i++){
+    	printf("%d:%d:%d ", Tasks[i].hour, Tasks[i].min, Tasks[i].sec);
+    	for(int j = 0; j < Tasks[i].command.size(); j++){
+    			printf("%s ", Tasks[i].command[j].c_str());
+		}
+		cout << endl;
+	}
 }
 /*
     time_t t = time(0);
     tm* now = localtime(&t);
     tm_sec; tm_min; tm_hour;
-    things about time_t I will need. Just not ot forget
 */
-
-
 
