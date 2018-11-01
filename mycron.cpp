@@ -6,6 +6,7 @@
 #include <ctime>
 #include <iostream>
 #include <string>
+#include <sys/stat.h>
 #include <cstddef>
 #include <cstring>
 #include <vector>
@@ -17,7 +18,7 @@ struct task{
     int sec = -2;
     vector<string>command;
 };
-
+time_t last_change;
 vector<task>Tasks;
 
 struct task parse(string line){ //create a struct tusk from one line of input file
@@ -70,7 +71,14 @@ void read_file(string path){
 	
 
 void changed(){ //function that will look for changes in input file
-	//TODO
+	struct stat mycrontab;
+	stat("mycrontab", &mycrontab);
+	if (mycrontab.st_mtime > last_change) {
+		last_change = mycrontab.st_mtime;
+		return 1;
+	} else
+		return 0;
+}
 }
 
 void update_tasks(){ //function that will update vector of tasks 
@@ -78,14 +86,7 @@ void update_tasks(){ //function that will update vector of tasks
 }
 
 int main(){
-   /* for(;;){	// main loop 
-	if(changed){
-	    update_tasks();
-	}
-	for(int i = 0; i < Tasks.size(); i++){
-	    if(current_Time >= Tasks[i].Time) exec();
-	}
-    }*/
+/*
     read_file("mycrontab");
     for(int i = 0; i < Tasks.size(); i++){
     	printf("%d:%d:%d ", Tasks[i].hour, Tasks[i].min, Tasks[i].sec);
@@ -93,6 +94,21 @@ int main(){
     			printf("%s ", Tasks[i].command[j].c_str());
 		}
 		cout << endl;
+	}	
+//*/
+	for(;;){
+		if(changed()){
+			
+		}else{
+			time_t rawtime;
+			time (&rawtime);
+ 			struct tm * current_time = localtime(&rawtime);
+			for(int i = 0; i < Tasks.size(); i++){
+				if(Tasks[i].hour <= current_time.tm_hour && Tasks[i].min <= current_time.tm_min && Tasks[i].sec <= current_time.tm_sec){
+					
+				}	
+			}
+		}
 	}
 }
 /*
