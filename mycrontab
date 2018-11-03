@@ -1,4 +1,6 @@
 *:*:0 ls -a
 *:*:15 ls
-*:*:30 pwd 
+*:*:30 pwd -L
 *:*:45 echo beep
+*:*:30 echo beeppppp
+*:*:30 ls

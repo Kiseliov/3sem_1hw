@@ -15,21 +15,16 @@
 
 using namespace std;
 
-struct Task{											//DONE
+struct Task{
     int hour = -2;	//-2 default; 24 for *; 
     int min = -2; 	//2*24*60 for *
     int sec = -2;
-   // int mass;		// sort using mass
+    tm *done;
     vector<string>command;
 };
 time_t last_change = 0;
 vector<pid_t>shoot_list;
 vector<Task>Tasks;
-// bool compare_mass(const Task &a, const Task &b)			//DONE
-// {
-//     return a.mass < b.mass;
-// }
-
 
 struct Task parse(string line){ //create a struct tusk from one line of input file DONE
 	struct Task result;
@@ -40,7 +35,7 @@ struct Task parse(string line){ //create a struct tusk from one line of input fi
 		if(line[i] == ' '){
 			result.sec = t;
 			break;
-		}else if(line[i] != ':'){ // cipherka
+		}else if(line[i] != ':'){
 			if (line[i] == '*'){
 				if(first == 0)t = 24;
 				if(first == 1)t = 2*24*60;
@@ -58,19 +53,19 @@ struct Task parse(string line){ //create a struct tusk from one line of input fi
 			t = 0;
 		}
 	}
-	line.push_back(' ');
+	line[line.size()] = ' ';
 	i++;
-	string tt;																		 	
-		while( i < line.size() ){													
-			tt.push_back(line[i]);												
-			if(line[i] == ' ' ){												
-				tt.pop_back();													
-				result.command.push_back(tt);									
-				tt.erase();														
-			}	
-			i++;					
-		} 
-//	result.mass = result.hour + result.min + result.sec;
+	string tt;	
+	int si = line.size();																	 	
+	while( i <= line.size()){													
+		tt.push_back(line[i]);											
+		if(line[i] == ' '){												
+			tt.pop_back();													
+			result.command.push_back(tt);									
+			tt.erase();														
+		}	
+		i++;		
+	} 
 	return result;
 }
 
@@ -83,11 +78,10 @@ void read_tasks(string path){
 		temp_task = parse(temp_str);
 		Tasks.push_back(temp_task);
 	};
-//	sort(Tasks.begin(), Tasks.end(), compare_mass);			//?
 }
 	
 
-int changed(){ //function that will look for changes in input file		//?
+int changed(){ //function that will look for changes in input file
 	struct stat mycrontab;
 	stat("mycrontab", &mycrontab);
 	if (mycrontab.st_mtime > last_change) {
@@ -106,20 +100,21 @@ void kill_all(){
 
 }
 
-pid_t do_task(struct Task task){				//DONE ? WITH KILL
-	const char **args = new const char*[task.command.size()];	
-	for(int i = 1; i < task.command.size(); i++){
-		args[i-1] = task.command[i].c_str();
-	}
-	args[task.command.size()] = NULL;
-	const char *path = task.command[0].c_str();
-	pid_t parent_pid = getpid();
-	pid_t temp_pid = fork();
-	if(getpid() != parent_pid){
-		cout << "execute " << task.command[0] << endl;
-		execv(path, (char**)args);
-	}
-	return temp_pid;
+pid_t do_task(struct Task task){
+	char const **argv = new const char*[task.command.size() + 1];           
+    for (int j = 0;  j < task.command.size();  ++j){
+ 		argv[j] = task.command[j].c_str();
+    }
+    argv[task.command.size()] = NULL;
+    pid_t temp_pid;
+    if((temp_pid = fork()) < 0){
+    	printf("%s\n","fork failed");
+    }else if(temp_pid == 0){
+    	execvp (task.command[0].c_str(), (char**)argv);
+    	perror("execvp failed \n");
+    	printf("%s\n", "sad true" );
+    }
+    return temp_pid;
 }
 
 void do_all_tasks(){
@@ -132,7 +127,7 @@ void do_all_tasks(){
 			temp_pid = do_task(Tasks[i]);
 			shoot_list.push_back(temp_pid);
 			if(Tasks[i].hour < 24){
-				Tasks.erase(Tasks.begin()+i);				///TODO ZOMBIE
+				Tasks.erase(Tasks.begin()+i);
 			}
 		}
 	}
@@ -140,13 +135,6 @@ void do_all_tasks(){
 
 
 int main(){
-//*
-    read_tasks("mycrontab");
-    cout << Tasks[0].command.size()<< " ";
-    cout << Tasks[0].command[0] <<" "<< Tasks[0].command[1] << endl;
-    do_task(Tasks[0]);
-
-/*/
 	time_t rawtime;
 	time (&rawtime);
 	struct tm *cur_time;
@@ -159,15 +147,6 @@ int main(){
 			read_tasks("mycrontab");
 			cout << asctime(cur_time) << " rereaded" << endl;
 		}else{
-			for(int i = 0; i < Tasks.size(); i++){
-				cout << Tasks[i].hour << " "<<Tasks[i].min<<" "<<Tasks[i].sec<<" ";
-				for(int j = 0; j < Tasks[i].command.size(); j++){
-					cout << Tasks[i].command[j] << " ";
-				}  
-				cout << endl;
-			}
 			do_all_tasks();
 		};
-	} while(true);
-//*/
 }
