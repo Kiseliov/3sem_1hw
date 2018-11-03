@@ -7,30 +7,32 @@
 #include <iostream>
 #include <string>
 #include <sys/stat.h>
+#include <sys/types.h>
+#include <signal.h>
 #include <cstddef>
 #include <cstring>
 #include <vector>
 
 using namespace std;
 
-struct Task{
-    int hour = -2; //-2 default; 24 for *; 
-    int min = -2;				//2*24*60 for *
+struct Task{											//DONE
+    int hour = -2;	//-2 default; 24 for *; 
+    int min = -2; 	//2*24*60 for *
     int sec = -2;
-    int mass;			// sort using mass
+    int mass;		// sort using mass
     pid_t pid;
     vector<string>command;
 };
 time_t last_change = 0;
-
+vector<pid_t>shoot_list;
 vector<Task>Tasks;
-bool compare_mass(const Task &a, const Task &b)
+bool compare_mass(const Task &a, const Task &b)			//DONE
 {
     return a.mass > b.mass;
 }
 
 
-struct Task parse(string line){ //create a struct tusk from one line of input file
+struct Task parse(string line){ //create a struct tusk from one line of input file DONE
 	struct Task result;
 	int t = 0;
 	int i = 0;
@@ -73,7 +75,7 @@ struct Task parse(string line){ //create a struct tusk from one line of input fi
 	return result;
 }
 
-void read_tasks(string path){
+void read_tasks(string path){			
 	//read and prepare data from input file using parse
 	ifstream f(path.c_str());
 	string temp_str;
@@ -81,11 +83,12 @@ void read_tasks(string path){
 	while(getline(f, temp_str)){
 		temp_task = parse(temp_str);
 		Tasks.push_back(temp_task);
-	}
+	};
+	sort(Tasks.begin(), Tasks.end(), compare_mass);			//?
 }
 	
 
-int changed(){ //function that will look for changes in input file
+int changed(){ //function that will look for changes in input file		//?
 	struct stat mycrontab;
 	stat("mycrontab", &mycrontab);
 	if (mycrontab.st_mtime > last_change) {
@@ -95,20 +98,49 @@ int changed(){ //function that will look for changes in input file
 		return 0;
 }
 
-void kill_all(){
-	for(int i = 0; i < Tasks.size(); i++){
-		kill(Tasks[0].pid, 0);
-		Tasks.erase(0);
+void kill_all(){						
+	for(int i = 0; i< shoot_list.size(); i++){
+		kill(shoot_list[i], 0);
 	}
+	shoot_list.clear();
+	Tasks.clear();
 
 }
-void do_task(struct Task task){
 
+pid_t do_task(struct Task task){				//DONE ? WITH KILL
+	const char **args = new const char*[task.command.size()];	
+	for(int i = 1; i < task.command.size(); i++){
+		args[i-1] = task.command[i].c_str();
+	}
+	args[task.command.size()] = NULL;
+	const char *path = task.command[0].c_str();
+	pid_t parent_pid = getpid();
+	pid_t temp_pid = fork();
+	if(getpid() != parent_pid){
+		execv(path, (char**)args);
+	}
+	return temp_pid;
+}
+
+void do_all_tasks(){
+	time_t rawtime; 											
+	time (&rawtime);
+	struct tm *cur_time = localtime(&rawtime);
+	pid_t temp_pid;
+	for(int i = 0; i < Tasks.size(); i++){
+		if(cur_time->tm_hour > Tasks[i].hour && cur_time->tm_min > Tasks[i].min && cur_time->tm_sec > Tasks[i].sec){
+			temp_pid = do_task(Tasks[i]);
+			shoot_list.push_back(temp_pid);
+			if(Tasks[i].hour < 24){
+				Tasks.erase(Tasks.begin()+i);				///TODO ZOMBIE
+			}
+		}else break;
+	}
 }
 
 
 int main(){
-//*
+/*
     read_tasks("mycrontab");
     sort(Tasks.begin(), Tasks.end(), compare_mass);
     for(int i = 0; i < Tasks.size(); i++){
@@ -122,27 +154,10 @@ int main(){
 	for(;;){
 		if(changed()){
 			kill_all();
-			read_tasks();
-		}
-		time_t rawtime; 											//1970 in ms
-		time (&rawtime);
-		struct tm *current_time = localtime(&rawtime);				//	
-		for(int i = 0; i < Tasks.size(); i++){
-			if(Tasks[i].hour <= current_time.tm_hour && Tasks[i].min <= current_time.tm_min 
-					&& Tasks[i].sec <= current_time.tm_sec){
-				do_task(Tasks[i]);
-				if(Tasks[i].hour != -1){
-					Tasks.erase(i);
-				}
-			}else break;
-		}
+			read_tasks("mycrontab");
+		}else{
+			do_all_tasks();
+		}	
 	}
 //*/
 }
-
-/*
-    time_t t = time(0);
-    tm* now = localtime(&t);
-    tm_sec; tm_min; tm_hour;
-*/
-
