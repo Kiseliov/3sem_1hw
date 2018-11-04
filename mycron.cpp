@@ -72,6 +72,10 @@ struct Task parse(string line){ //create a struct tusk from one line of input fi
 void read_tasks(string path){			
 	//read and prepare data from input file using parse
 	ifstream f(path.c_str());
+	if(!f){
+		cout << "Error: " << strerror(errno) << endl;
+		exit(1);
+	}
 	string temp_str;
 	struct Task temp_task;
 	while(getline(f, temp_str)){
@@ -81,9 +85,14 @@ void read_tasks(string path){
 }
 	
 
-int changed(){ //function that will look for changes in input file
+int changed(string path){ //function that will look for changes in input file
+	ifstream f(path.c_str());
+	if(!f){
+		cout << "Error: " << strerror(errno) << endl;
+		exit(1);
+	}
 	struct stat mycrontab;
-	stat("mycrontab", &mycrontab);
+	stat(path.c_str(), &mycrontab);
 	if (mycrontab.st_mtime > last_change) {
 		last_change = mycrontab.st_mtime;
 		return 1;
@@ -108,11 +117,11 @@ pid_t do_task(struct Task task){
     argv[task.command.size()] = NULL;
     pid_t temp_pid;
     if((temp_pid = fork()) < 0){
-    	printf("%s\n","fork failed");
+    	printf("%s %s\n","fork failed for command ", task.command[0].c_str());
     }else if(temp_pid == 0){
     	execvp (task.command[0].c_str(), (char**)argv);
-    	perror("execvp failed \n");
-    	printf("%s\n", "sad true" );
+    	perror("execvp failed for command ");
+    	cout << task.command[0].c_str() << endl;
     }
     return temp_pid;
 }
@@ -138,15 +147,17 @@ int main(){
 	time_t rawtime;
 	time (&rawtime);
 	struct tm *cur_time;
-	int c;
+	int c = 1;
 	do{
 		time(&rawtime);
 		cur_time = localtime(&rawtime);
-		if(changed()){
+		if(changed("mycrontab")){
 			kill_all();
 			read_tasks("mycrontab");
 			cout << asctime(cur_time) << " rereaded" << endl;
 		}else{
 			do_all_tasks();
-		};
+		}
+		sleep(1);
+	}while(c);
 }

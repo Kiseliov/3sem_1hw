@@ -3,4 +3,4 @@
 *:*:30 pwd -L
 *:*:45 echo beep
 *:*:30 echo beeppppp
-*:*:30 ls
+
