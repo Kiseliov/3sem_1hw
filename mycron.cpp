@@ -37,8 +37,10 @@ struct Task parse(string line){ //create a struct tusk from one line of input fi
 			break;
 		}else if(line[i] != ':'){
 			if (line[i] == '*'){
-				if(first == 0)t = 24;
-				if(first == 1)t = 2*24*60;
+				if(first == 0)
+					t = 24;
+				if(first == 1)
+					t = 2*24*60;
 				first++;
 			} else {
  				t*=10;
@@ -120,8 +122,8 @@ pid_t do_task(struct Task task){
     	printf("%s %s\n","fork failed for command ", task.command[0].c_str());
     }else if(temp_pid == 0){
     	execvp (task.command[0].c_str(), (char**)argv);
-    	perror("execvp failed for command ");
-    	cout << task.command[0].c_str() << endl;
+    	perror("execvp failed with code");
+    	cout << "for command " << task.command[0].c_str() << endl;
     }
     return temp_pid;
 }
